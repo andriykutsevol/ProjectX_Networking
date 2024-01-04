@@ -1,0 +1,584 @@
+===============================================
+Switches
+===============================================
+
+-------------------
+Description
+-------------------
+
+
+PXSwitch1
+    It is just for gathering Users together.
+    In production, users will be from the Internet.
+    It connects:
+        User1, User2 and User3
+
+    Connected to:
+        Project X Router
+
+
+
+PXSwitch2
+    Main service network.
+    Users can login and get VPN service (with load balancing).
+    It connects:
+        [User3] with [VPN1, VPN2] with [Control, Auth/DB]
+
+    Connected to:
+        Project X Router    
+
+
+
+PXSwitch3
+    Control network.
+    Is it for the load balancing?
+
+    It connects:
+        [Control, Auth/DB] with [VPN1, VPN2]
+            But actually it does not need to connect Auth/DB with VPNs. Only Contlol Server with VPNs.
+
+    Connected to:
+        Project X Router
+
+
+
+
+LAN_RU2
+    I don't understand what this is for.
+
+    It connects:
+        [User1, User2, User3] with [Control, Auth/DB] with [VPN1, VPN2] with [NS2] with [WinSrv_DC2] with [Win11_Ru2] with [PfSence_RU2]
+
+    Connected to:
+        Project X Router  
+
+
+
+
+Interlink
+    VLAN ID: 0
+    Virtual Machines (1)
+    WinSrv_DC2
+        Physical adapters
+            vmnic0, 1000 Mbps, Full
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------
+Details
+-------------------
+
+
+PXSwitch1 (Users)
+    Virtual switch: PXSwitch1
+    VLAN ID: 0
+    Virtual Machines (4)
+
+
+        Project X User1
+            MAC Address 00:0c:29:f3:1d:64
+
+
+        Projext X User2
+            MAC Address 00:0c:29:76:2b:89
+
+
+        ProjectX User3
+            MAC Address 00:0c:29:d8:4e:1b
+
+
+        Project X Router
+            MAC Address 00:0c:29:c8:5b:0a
+
+
+
+PXSwitch2 (Main service network)
+    Virtual switch: PXSwitch2
+    VLAN ID: 0
+    Virtual Machines (6)
+
+        Project X VPN1 Server Ubuntu
+            (VMware Tools is not managed by vSphere)
+
+        Project X VPN2 Server Ubuntu
+            (VMware Tools is not managed by vSphere)
+
+
+        ProjectX User3
+            MAC Address 00:0c:29:d8:4e:25
+
+
+        Project X Control Server Ubuntu
+            MAC Address 00:0c:29:10:6c:91
+
+
+        Project X Auth-DB Server Ubuntu
+            MAC Address 00:0c:29:c4:f8:94
+
+
+        Project X Router
+            MAC Address 00:0c:29:c8:5b:14
+
+
+
+
+PXSwitch3 (Control network)
+    Virtual switch: PXSwitch3
+    VLAN ID: 0
+    Virtual Machines (5)
+
+        Project X VPN1 Server Ubuntu
+            (VMware Tools is not managed by vSphere)
+
+        Project X VPN2 Server Ubuntu
+            MAC Address 00:0c:29:ad:31:d6
+
+
+        Project X Control Server Ubuntu
+            MAC Address 00:0c:29:10:6c:9b
+
+
+        Project X Auth-DB Server Ubuntu
+            (VMware Tools is not managed by vSphere)
+
+        Project X Router
+            MAC Address 00:0c:29:c8:5b:1e
+
+
+
+
+
+LAN_RU2 (I don't understand what this is for)
+    Virtual switch: Internal
+    VLAN ID: 0
+    Virtual Machines (12)
+
+        Project X VPN2 Server Ubuntu
+            MAC Address 00:0c:29:ad:31:cc
+
+
+        Project X User1
+            MAC Address 00:0c:29:f3:1d:46
+        
+        
+        Projext X User2
+            MAC Address 00:0c:29:76:2b:7f
+        
+        
+        ProjectX User3
+            MAC Address 00:0c:29:d8:4e:11
+        
+        
+        Project X Router
+            MAC Address 00:0c:29:c8:5b:28
+        
+        
+        Win11_RU2
+            LAN_RU2 (Connected)
+
+
+        NS2
+            MAC Address 00:0c:29:e9:23:0c
+        
+        
+        WinSrv_DC2
+            LAN_RU2 (Connected)
+
+
+        PfSense_RU2
+            MAC Address 00:0c:29:c5:60:2c
+        
+        
+        Project X Control Server Ubuntu
+            VMware Tools is not managed by vSphere
+
+        Project X Auth-DB Server Ubuntu
+            MAC Address 00:0c:29:c4:f8:8a
+        
+        
+        Project X VPN1 Server Ubuntu
+        MAC Address 00:0c:29:0c:ae:3c
+
+
+
+
+
+
+
+===============================================
+VMs
+===============================================
+
+
+-------------------
+Project X Router
+-------------------
+
+
+    Guest OS: FreeBSD 14 or later versions (64-bit)
+        Compatibility: ESXi 8.0 U2 virtual machine
+        VMware Tools: No
+        CPUs: 56
+        Memory: 8 GB
+
+    VMware Tools is not installed in this virtual machine. 
+        VMware Tools allows detailed guest information to be displayed 
+        as well as allowing you to perform operations on the guest OS, e.g. graceful shutdown, reboot, etc. 
+        You should install VMware Tools.
+
+
+
+    Network adapter 1	PXSwitch1 (Connected)
+    Network adapter 2	PXSwitch2 (Connected)
+    Network adapter 3	PXSwitch3 (Connected)
+    Network adapter 4	LAN_RU2 (Connected)
+    Video card	16 MB
+    CD/DVD drive 1	ISO [LocalDatastore] ISO's/pfSense-CE-2.7.0-RELEASE-amd64.iso
+
+
+    Networking	                
+        Host name	                (not available because VMware Tools is not installed?)
+        IP addresses                (not available because VMware Tools is not installed?)         	
+
+
+
+
+-------------------
+Project X Control Server Ubuntu
+-------------------
+
+Guest OS Ubuntu Linux (64-bit)
+    Compatibility: ESXi 8.0 U2 virtual machine
+    VMware Tools: Yes
+    CPUs: 56
+    Memory:16 GB    
+
+
+
+    Network adapter 1	LAN_RU2 (Connected)
+    Network adapter 2	PXSwitch2 (Connected)
+    Network adapter 3	PXSwitch3 (Connected)
+    Video card	16 MB
+    CD/DVD drive 1	ISO [LocalDatastore] ISO's/ubuntu-22.04.3-live-server-amd64 (1).iso
+
+
+
+    Networking	
+        Host name	control-server
+        IP addresses	
+        
+            1. 10.0.0.11
+            2. fe80::fab7:f6a2:82f1:4ba2
+
+            3. 10.20.0.10
+            4. fe80::ed28:d0cc:1f03:fc46
+        
+        VMware Tools	VMware Tools is not managed by vSphere
+
+
+        Interfaces:
+        
+            LAN_RU2 (I don't understand what this is for)
+            ens34: <NO-CARRIER, BROADCAST, MULTICAST, UP> state DOWN
+                altname: enp2s2
+                00:0c:29:10:6c:87
+
+            PXSwitch2 (Main service network.)
+            ens35: <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+                altname: enp2s3
+                00:0c:29:10:6c:91
+                ip: 10.0.0.11/24
+                brd: 10.0.0.255
+
+
+            PXSwitch3 (Control network)
+            ens36:  <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+                altname: enp2s4
+                00:0c:29:10:6c:9b
+                ip: 10.20.0.10/24
+                brd: 10.20.0.255
+
+
+
+            Tests:
+
+                (OK) ping 10.20.0.11     (auth/db server), (Control network)
+                    
+                    "Control Server" can reach "Auth-DB Server" 
+
+
+
+
+
+
+-------------------
+Project X Auth-DB Server Ubuntu
+-------------------
+
+Guest OS
+Ubuntu Linux (64-bit)
+    Compatibility: ESXi 8.0 U2 virtual machine
+    VMware Tools: Yes
+    CPUs: 56
+    Memory: 16 GB
+
+
+    Network adapter 1	LAN_RU2 (Connected)
+    Network adapter 2	PXSwitch2 (Connected)
+    Network adapter 3	PXSwitch3 (Connected)
+    Video card	16 MB
+    CD/DVD drive 1	ISO [LocalDatastore] ISO's/ubuntu-22.04.3-live-server-amd64 (1).iso
+
+
+
+    Networking	
+        Host name	auth-db
+        IP addresses	
+
+            1. 10.0.0.12
+            2. fe80::1284:12bf:aee0:93d3
+
+            3. 10.20.0.11
+            4. fe80::b968:e2db:4da4:446d
+
+        VMware Tools	VMware Tools is not managed by vSphere
+
+
+    Interfaces:
+
+        LAN_RU2 (I don't understand what this is for)
+        ens34: <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+            altname: enp2s2
+            00:0c:29:c4:f8:8a
+            NO IP
+
+
+        PXSwitch2 (Main service network.)
+        ens37: <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+            altname: enp2s5
+            00:0c:29:c4:f8:94
+            ip: 10.0.0.12/24
+            brd: 10.0.0.255
+
+
+        PXSwitch3 (Control network)
+        ens38: <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+            altname: enp2s6
+            00:0c:29:c4:f8:9e
+            ip: 10.20.0.11/24
+            brd: 10.20.0.255
+
+
+
+        Tests:
+
+            (OK) ping 10.20.0.10     (control server), (Control network)
+                
+                "auth/db server" can reach "Control Server" 
+
+
+
+
+
+-------------------
+Project X VPN1 Server Ubuntu
+-------------------
+
+Guest OS: Ubuntu Linux (64-bit)
+    Compatibility: ESXi 8.0 U2 virtual machine
+    VMware Tools: Yes
+    CPUs: 56
+    Memory: 16 GB
+    Host name: vpn1
+
+
+
+    Network adapter 1	LAN_RU2 (Connected)
+    Network adapter 2	PXSwitch3 (Connected)
+    Network adapter 3	PXSwitch2 (Connected)
+    Video card	16 MB
+    CD/DVD drive 1	ISO [LocalDatastore] ISO's/ubuntu-22.04.3-live-server-amd64 (1).iso
+
+
+    Networking:	
+        Host name	vpn1
+            IP addresses
+
+            1. 10.20.0.12
+            2. fe80::c08b:6a1d:30e8:4d22
+
+            3. 10.0.0.14
+            4. fe80::5e63:984e:3bc8:5aab
+
+
+        Interfaces:
+
+            LAN_RU2 (I don't understand what this is for)
+            ens34:  <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+                altname: enp2s2
+                00:0c:29:0c:ae:3c
+                No IP
+
+
+            PXSwitch3 (Control network)
+            ens37: <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+                altname: enp2s5
+                00:0c:29:0c:ae:46
+                ip: 10.20.0.12/24
+                brd: 10.20.0.155
+
+            PXSwitch2 (Main service network)
+            ens38: <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+                altname: enp2s6
+                00:0c:29:0c:ae:50
+                ip: 10.0.0.14/24
+                brd: 10.0.0.255
+
+
+
+            Tests:
+
+                (OK) ping 10.20.0.11    (auth db server), (Contol network)
+                    
+                    "VPN1" can reach "Auth DB Server"
+
+
+                (OK) ping 10.20.0.10    (control server), (Contol network)
+                    
+                    "VPN1" can reach "Control Server"
+
+
+
+
+
+
+-------------------
+Project X VPN2 Server Ubuntu
+-------------------
+
+Guest OS: Ubuntu Linux (64-bit)
+    Compatibility: ESXi 8.0 U2 virtual machine
+    VMware Tools: Yes
+    CPUs: 56
+    Memory: 16 GB
+    Host name: vpn2
+
+
+    Network adapter 1	LAN_RU2 (Connected)
+    Network adapter 2	PXSwitch3 (Connected)
+    Network adapter 3	PXSwitch2 (Connected)
+    Video card	16 MB
+    CD/DVD drive 1	ISO [LocalDatastore] ISO's/ubuntu-22.04.3-live-server-amd64 (1).iso
+
+
+
+    Networking	
+        Host name	vpn2
+            IP addresses
+
+            1. 10.20.0.13
+            2. fe80::3798:fa92:1251:8a4b
+
+            3. 10.0.0.15
+            4. fe80::8a21:313f:9e1c:eb90
+
+
+        Interfaces:
+
+            LAN_RU2 (I don't understand what this is for)
+            ens34:  <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+                altname: enp2s2
+                00:0c:29:ad:31:cc
+                No IP
+
+
+            PXSwitch3 (Control network)
+            ens37: <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+                altname: enp2s5
+                00:0c:29:ad:31:d6
+                ip: 10.20.0.13/24
+                brd: 10.20.0.155
+
+            PXSwitch2 (Main service network.)
+            ens38: <BROADCAST, MULTICAST, UP, LOWER_UP> state UP
+                altname: enp2s6
+                00:0c:29:ad:31:e0
+                ip: 10.0.0.15/24
+                brd: 10.0.0.255
+
+
+
+
+
+
+-------------------
+ProjectX User3
+-------------------
+
+
+Guest OS: Microsoft Windows 11 (64-bit) VBS not enabled
+    Compatibility: ESXi 8.0 U2 virtual machine
+    VMware Tools: Yes
+    CPUs: 56
+    Memory: 16 GB
+    Host name: DESKTOP-JIEFEHF
+
+
+
+    Network adapter 1	LAN_RU2 (Connected)
+    Network adapter 2	PXSwitch1 (Connected)
+    Network adapter 3	PXSwitch2 (Connected)
+    Video card	16 MB
+    CD/DVD drive 1	ISO [LocalDatastore] ISO's/tiny11 23H2 x64.iso
+
+
+
+
+Networking	(Windows)
+
+    Host name	DESKTOP-JIEFEHF
+        IP addresses
+
+        PXSwitch1 (It is just for gathering Users together)
+        1. fe80::8a39:38d6:fd27:95ba
+        2. 192.168.0.10
+
+        PXSwitch2 (Main service network.)
+        3. fe80::83b0:d244:a866:8a74
+        4. 10.0.0.10
+
+            Tests:
+
+                (OK) ping 10.0.0.14     (vpn1), (Main service network)
+                    
+                    "ProjectX User3" can reach "Project X VPN1 Server Ubuntu" 
+
+
+                (OK) ping 10.0.0.12     (auth/db server), (Main service network)
+                    
+                    "ProjectX User3" can reach "Project X Auth-DB Server Ubuntu"  
+
+
+
+                (OK) ping 10.0.0.11     (control server), (Main service network)
+                    
+                    "ProjectX User3" can reach "Project X Control Server Ubuntu" 
+
+
+
+
+
+
+
+
+
+

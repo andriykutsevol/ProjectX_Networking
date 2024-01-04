@@ -1,0 +1,548 @@
+==============================================================================================================
+Auth-DB Server
+Configure CA server - Certificate Authority (CA) server
+
+
+https://www.digitalocean.com/community/tutorials/how-to-set-up-and-configure-a-certificate-authority-ca-on-ubuntu-20-04
+How To Set Up and Configure a Certificate Authority (CA) On Ubuntu 20.04
+
+A Certificate Authority (CA) is an entity responsible for issuing digital certificates to verify identities on the internet.
+Although public CAs are a popular choice for verifying the identity of websites 
+and other services that are provided to the general public, private CAs are typically used for closed groups and private services.
+
+
+Building a private Certificate Authority will enable you to configure, test, and run programs that require 
+    encrypted connections between a client and a server. 
+
+With a private CA, you can issue certificates for users, servers, or individual programs and services within your infrastructure.
+
+Some examples of programs on Linux that use their own private CA are 
+    OpenVPN and 
+    Puppet
+
+
+You can also configure your web server to use certificates issued by a private CA in order 
+    to make development and staging environments 
+        match production servers that use TLS to encrypt connections.
+
+
+In this guide, we’ll learn how to set up a private Certificate Authority on an Ubuntu 20.04 server, 
+    and how to generate and sign a testing certificate using your new CA. 
+
+
+You will also learn how to import the CA server’s public certificate into your operating system’s certificate store 
+    so that you can verify the chain of trust between the CA and remote servers or users. 
+
+
+Finally you will learn how to revoke certificates and distribute a Certificate Revocation List 
+    to make sure only authorized users and systems can use services that rely on your CA.
+
+
+
+--------
+Prerequisites
+--------
+
+
+To complete this tutorial, you will need access to an Ubuntu 20.04 server to host your CA server.
+
+
+
+--------
+Step 1 — Installing Easy-RSA
+--------
+
+
+sudo apt update
+sudo apt install easy-rsa
+
+
+
+--------
+Step 2 — Preparing a Public Key Infrastructure Directory
+--------
+
+
+    mkdir ~/easy-rsa
+
+        We’ll use this directory to create symbolic links pointing to the easy-rsa package files that we’ve installed in the previous step. 
+        These files are located in the /usr/share/easy-rsa folder on the CA Server.
+
+    Create the symlinks with the ln command:
+    ln -s /usr/share/easy-rsa/* ~/easy-rsa/
+
+
+    chmod 700 /home/sammy/easy-rsa
+
+    cd ~/easy-rsa
+    ./easyrsa init-pki
+
+
+    Output
+        init-pki complete; you may now create a CA or requests.
+        Your newly created PKI dir is: /home/tech/easy-rsa/pki
+
+    After completing this section you have a directory that contains all the files that are needed to create a Certificate Authority. 
+
+
+    In the next section you will create the private key and public certificate for your CA.
+
+
+
+--------
+Step 3 — Creating a Certificate Authority
+--------
+
+
+    cd ~/easy-rsa
+    nano vars
+
+
+        ~/easy-rsa/vars
+        set_var EASYRSA_REQ_COUNTRY    "US"
+        set_var EASYRSA_REQ_PROVINCE   "NewYork"
+        set_var EASYRSA_REQ_CITY       "New York City"
+        set_var EASYRSA_REQ_ORG        "DigitalOcean"
+        set_var EASYRSA_REQ_EMAIL      "admin@example.com"
+        set_var EASYRSA_REQ_OU         "Community"
+        set_var EASYRSA_ALGO           "ec"
+        set_var EASYRSA_DIGEST         "sha512"
+
+    To create the root public and private key pair for your Certificate Authority, 
+        run the ./easy-rsa command again, this time with the build-ca option:
+
+        ./easyrsa build-ca nopass
+            Common Name: Auth-DB_Server
+
+            CA creation complete and you may now import and sign cert requests
+            Your new CA certificate file for publishing is at:
+            /home/tech/easy-rsa/pki/ca.crt
+
+    You now have two important files — 
+        ~/easy-rsa/pki/ca.crt and 
+        ~/easy-rsa/pki/private/ca.key
+    which make up the public and private components of a Certificate Authority.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+==============================================================================================================
+VNP1 Server
+Install Openvpn
+
+
+https://www.digitalocean.com/community/tutorials/how-to-set-up-and-configure-an-openvpn-server-on-ubuntu-20-04
+
+--------
+Step 1 — Installing OpenVPN and Easy-RSA
+--------
+
+    sudo apt install openvpn easy-rsa
+        test:Test123
+
+
+
+    Easy-RSA is a public key infrastructure (PKI) management tool that you will use on the OpenVPN Server
+    to generate a certificate request that you will then verify and sign on the CA Server.
+
+
+
+    Next you will need to create a new directory on the OpenVPN Server as your non-root user called ~/easy-rsa:
+
+        $ mkdir ~/easy-rsa
+
+
+            Note: While other guides might instruct you to copy the easy-rsa package files into your PKI directory, 
+            this tutorial adopts a symlink approach. 
+            As a result, any updates to the easy-rsa package will be automatically reflected in your PKI’s scripts.
+
+
+
+    Finally, ensure the directory’s owner is your non-root sudo user and restrict access to that user using chmod:
+
+
+        sudo chown sammy ~/easy-rsa
+        chmod 700 ~/easy-rsa
+
+
+    Tthe next step is to create a 
+        Public Key Infrastructure (PKI) on the OpenVPN server 
+            so that you can request and manage TLS certificates for clients 
+            and other servers that will connect to your VPN.    
+
+
+
+
+--------
+Step 2 — Creating a PKI for OpenVPN
+--------
+
+    CA server - Certificate Authority (CA) server
+    PKI - Public Key Infrastructure
+
+
+
+
+
+    Before you can create your OpenVPN server’s private key and certificate, 
+    you need to create a local Public Key Infrastructure directory on your OpenVPN server.
+
+    You will use this directory to manage the server and clients’ certificate requests 
+    instead of making them directly on your CA server.
+
+
+    To build a PKI directory on your OpenVPN server, 
+        you’ll need to populate a file called "vars" with some default values.
+
+            cd ~/easy-rsa
+            nano vars    
+            add lines to it:
+
+                set_var EASYRSA_ALGO "ec"
+                set_var EASYRSA_DIGEST "sha512"
+
+            It will ensure that your private keys and certificate requests are configured to use modern Elliptic Curve Cryptography (ECC) 
+            to generate keys and secure signatures for your clients and OpenVPN server.
+
+    
+    Background: 
+        When clients connect to OpenVPN, 
+            they use asymmetric encryption (also known as public/private key) to perform a TLS handshake.
+        However, when transmitting encrypted VPN traffic, the server and clients use symmetric encryption, 
+            which is also known as shared key encryption.
+
+        There is much less computational overhead with symmetric encryption compared to asymmetric:
+            the numbers that are used are much smaller, 
+                and modern CPUs integrate instructions to perform optimized symmetric encryption operations. 
+
+        To make the switch from asymmetric to symmetric encryption, 
+            the OpenVPN server and client will use the Elliptic Curve Diffie-Hellman (ECDH) 
+                algorithm to agree on a shared secret key as quickly as possible.
+
+
+    
+    Once you have populated the vars file you can proceed with creating the PKI directory.
+        To do so, run the easyrsa script with the init-pki option. 
+
+    Although you already ran this command on the CA server as part of the prerequisites, 
+        it’s necessary to run it here because your OpenVPN server and CA server have separate PKI directories:
+
+
+        ./easyrsa init-pki
+
+            init-pki complete: you may now create a CA or requests.
+            Your newly created PKI dir is: /home/test/easy-rsa/pki
+
+
+
+        Note that on your OpenVPN server there is no need to create a Certificate Authority. 
+            Your CA server is solely responsible for validating and signing certificates. 
+
+        The PKI on your VPN server is only used as a convenient 
+            and centralized place to store certificate requests and public certificates.
+
+        After you’ve initialized your PKI on the OpenVPN server, 
+            you are ready to move on to the next step, 
+                which is creating an OpenVPN server certificate request and private key.
+
+
+
+
+--------
+Step 3 — Creating an OpenVPN Server Certificate Request and Private Key
+--------
+
+    Now that your OpenVPN server has all the prerequisites installed, 
+        the next step is to generate a private key and Certificate Signing Request (CSR) on your OpenVPN server. 
+
+    After that you’ll transfer the request over to your CA to be signed, creating the required certificate.
+
+    Once you have a signed certificate, you’ll transfer it back to the OpenVPN server and install it for the server to use.
+
+
+        cd ~/easy-rsa
+
+    
+    Now you’ll call the easyrsa with the gen-req option followed by a Common Name (CN) for the machine. 
+    The CN can be anything you like but it can be helpful to make it something descriptive.
+    Be sure to include the nopass option as well. 
+        Failing to do so will password-protect the request file which could lead to permissions issues later on.
+
+
+
+
+    ./easyrsa gen-req VPN1_Server nopass
+
+
+        Keypair and certificate request completed. Your files are:
+            req: /home/test/easy-rsa/pki/reqs/VPN1_Server.req
+            key: /home/test/easy-rsa/pki/private/VPN1_Server.key
+
+
+            This will create a private key for the server and a certificate request file called server.req. 
+        
+        Copy the server key to the /etc/openvpn/server directory:
+
+
+    sudo cp /home/test/easy-rsa/pki/private/VPN1_Server.key /etc/openvpn/server
+
+    ls /etc/openvpn/server
+        VPN1_Server.key
+
+
+    !!! After completing these steps, you have successfully created a PRIVATE KEY for your OpenVPN server.
+    You have also generated a Certificate Signing Request for the OpenVPN server. 
+
+    The CSR is now ready for signing by your CA.
+    In the next section of this tutorial you will learn how to sign a CSR with your CA server’s private key.
+
+
+
+--------
+Step 4 — Signing the OpenVPN Server’s Certificate Request
+--------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Win User 3
+
+    https://openvpn.net/community-downloads
+
+
+
+        The directory C:\Program Files\OpenVPN\config\ is the default place where
+        OpenVPN will look for configuration and key files. 
+
+
+            No readable connection profiles (config fils) found.
+            Use the "Import File..." or copy your config fils to 
+            "C:\Users\Tech\OpenVPN\config\" or
+            "C:\Program Files\OpenVPN\config\"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+===================================================
+Windows
+
+ipconfig
+
+
+
+===================================================
+
+
+nmtoi
+
+aptget install ethtool
+
+traceroute 192.168.0.1
+
+Ideally the vpn servers should not need to connect to the auth/db server directly, but it is fine for now, I am also adding dhcp to save you some time identifying interfaces
+
+
+
+
+Flowchart Maker & Online Diagram Software
+https://app.diagrams.net/
+
+
+
+
+
+===================================================
+Configure interface with "NetworkManager" command
+===================================================
+
+sudo apt install network-manager
+sudo systemctl enable --now NetworkManager
+cd /etc/netplan
+ls
+find config file OO-installer-config.yaml
+add: 
+    renderer: NetworkManager
+
+
+
+
+
+
+
+
+
+
+
+===================================================
+Configure interface with "ip" command
+===================================================
+
+bringht the interface UP
+
+
+$ sudo ip link set dev INTERFACE_NAME up
+
+$ sudo ip link set dev eth0 up
+
+
+
+---------
+linux ip command. set ip address to interface
+
+
+$ sudo ip address add IP_ADDRESS/MASK_LENGTH dev INTERFACE_NAME
+---------
+
+
+
+
+---------
+For example, to set the IP address of 192.168.1.2 with a subnet mask of 
+255.255.255.0 on the eth0 interface, you would use:
+
+
+
+$ sudo ip address add 192.168.1.2/24 dev eth0
+---------
+
+
+
+---------
+If you want to set the default gateway for the interface, you can use the following command:
+
+
+$ sudo ip route add default via GATEWAY_IP dev INTERFACE_NAME
+---------
+
+
+
+These changes are usually not persistent across reboots. 
+To make them persistent, you may need to edit network configuration files. 
+
+
+
+If you are using NetworkManager, 
+you might use the nmcli command to set IP addresses. For example:
+
+
+$ sudo nmcli connection modify CONNECTION_NAME ipv4.addresses IP_ADDRESS/MASK_LENGTH
+$ sudo nmcli connection up CONNECTION_NAME
+---------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
